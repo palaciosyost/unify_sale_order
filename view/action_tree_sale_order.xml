@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- View Subscriptions Change Customer wizard -->
+    <record id="sale_unify_order" model="ir.ui.view">
+        <field name="name">sale.unify.form</field>
+        <field name="model">sale.unify</field>
+        <field name="arch" type="xml">
+            <form string="New Customer Information">
+                <group>
+                    <group>
+                        <field name="select_mode" widget="radio" />
+                        <field name="select_mode_cliente" widget="radio" />
+                        <field name="new_cliente_sale" invisible="select_mode_cliente != 'new_cliente'"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="unify_sale" string="Submit" type="object" class="btn-primary" data-hotkey="q"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel" data-hotkey="x"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action Subscriptions Change Customer -->
+    <record id="action_unify_sale_order" model="ir.actions.act_window">
+        <field name="name">Unificar Cotizaciones</field>
+        <field name="res_model">sale.unify</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="sale_unify_order"/>
+        <field name="context">{'active_so_ids': active_ids}</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>
+ 

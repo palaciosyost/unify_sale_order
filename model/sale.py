@@ -1,0 +1,126 @@
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
+
+
+class SaleOrder (models.Model):
+    _inherit = "sale.order"
+
+    state = fields.Selection(selection_add=[("fusionado", "Fusionado")])
+
+
+
+class SaleUnify(models.TransientModel):
+    _name = "sale.unify"
+
+    select_mode = fields.Selection(
+        [
+            ("new_order", "Nueva Cotizacion"),
+            ("delete_order", "Eliminar Cotizaciones Fusionadas"),
+            ("readonly_order", "Solo lectura Cotizaciones Fusionada"),
+        ],
+        required=True
+    )
+    select_mode_cliente = fields.Selection([("new_cliente", "Nuevo Cliente"), ("cliente_set", "Usar Cliente Definido"),], string="Cliente")
+    new_cliente_sale = fields.Many2one("res.partner", string="Nuevo Cliente")
+    def unify_sale(self):
+        sale_ids = self.env["sale.order"].browse(self.env.context.get("active_ids"))
+        print("DATOS DE SALE-ORDER")
+        print(sale_ids)
+        lineas = []
+        
+        if any( sale.state in ["fusionado", "sale", "cancel"] for sale in sale_ids):
+            raise UserError(_("Las cotizaciones no deben estar en el estado  ['Fusionado', 'Orden de venta', 'Cancelado']"))
+        else:
+            if self.select_mode == "new_order":
+                self.new_order_merge(sale_ids,self.select_mode_cliente, self.new_cliente_sale )
+            if self.select_mode == "delete_order":
+                self.delete_order(sale_ids,self.select_mode_cliente, self.new_cliente_sale )
+            if self.select_mode == "readonly_order":
+                self.new_readonly_order(sale_ids,self.select_mode_cliente, self.new_cliente_sale )
+
+
+    def new_order_merge(self, sale_ids, select_mode_cliente, new_cliente_sale):
+        if select_mode_cliente == 'cliente_set' and len(set(sale.partner_id.id for sale in sale_ids)) > 1:
+            raise UserError(_("Si se requiere mantener el mismo cliente para la nueva cotizacion, seleccione las cotizaciones con que tengan el mismo cliente"))
+        if select_mode_cliente == 'new_cliente' and not new_cliente_sale:
+            raise UserError(_("Para crear un nueva cotizacion seleccione un cliente nuevo"))
+        
+        new_cotizacion = self.env["sale.order"].create({
+            "partner_id" : new_cliente_sale.id if select_mode_cliente == "new_cliente" else sale_ids[0].partner_id.id
+        })
+
+        for line in sale_ids.order_line:
+            line.copy({
+                "order_id" : new_cotizacion.id
+            })
+
+
+        for sale in sale_ids:
+            sale.message_post(body=f"Esta cotizacion esta fusionada en la cotizacion {new_cotizacion.name}", message_type="comment", subtype_xmlid="mail.mt_note")
+
+
+        return {
+            "type" : "ir.actions.act_window",
+            "name" : "Cotizacion",
+            "res_model" : "sale.order",
+            "view_mode" : "form",
+            "res_id" : new_cotizacion.id,
+
+        }
+    def new_readonly_order(self, sale_ids, select_mode_cliente, new_cliente_sale):
+        if select_mode_cliente == 'cliente_set' and len(set(sale.partner_id.id for sale in sale_ids)) > 1:
+            raise UserError(_("Si se requiere mantener el mismo cliente para la nueva cotizacion, seleccione las cotizaciones con que tengan el mismo cliente"))
+        if select_mode_cliente == 'new_cliente' and not new_cliente_sale:
+            raise UserError(_("Para crear un nueva cotizacion seleccione un cliente nuevo"))
+        
+        new_cotizacion = self.env["sale.order"].create({
+            "partner_id" : new_cliente_sale.id if select_mode_cliente == "new_cliente" else sale_ids[0].partner_id.id
+        })
+
+        for line in sale_ids.order_line:
+            line.copy({
+                "order_id" : new_cotizacion.id
+            })
+
+        sale_ids.write({
+            "state" : "fusionado",
+        })
+
+        for sale in sale_ids:
+            sale.message_post(body=f"Esta cotizacion esta fusionada en la cotizacion {new_cotizacion.name}", message_type="comment", subtype_xmlid="mail.mt_note")
+
+
+        return {
+            "type" : "ir.actions.act_window",
+            "name" : "Cotizacion",
+            "res_model" : "sale.order",
+            "view_mode" : "form",
+            "res_id" : new_cotizacion.id,
+
+        }
+    
+    def delete_order(self, sale_ids, select_mode_cliente, new_cliente_sale):
+        if select_mode_cliente == 'cliente_set' and len(set(sale.partner_id.id for sale in sale_ids)) > 1:
+            raise UserError(_("Si se requiere mantener el mismo cliente para la nueva cotizacion, seleccione las cotizaciones con que tengan el mismo cliente"))
+        if select_mode_cliente == 'new_cliente' and not new_cliente_sale:
+            raise UserError(_("Para crear un nueva cotizacion seleccione un cliente nuevo"))
+        
+        new_cotizacion = self.env["sale.order"].create({
+            "partner_id" : new_cliente_sale.id if select_mode_cliente == "new_cliente" else sale_ids[0].partner_id.id
+        })
+
+        for line in sale_ids.order_line:
+            line.copy({
+                "order_id" : new_cotizacion.id
+            })
+
+        sale_ids.unlink()
+
+        return {
+            "type" : "ir.actions.act_window",
+            "name" : "Cotizacion",
+            "res_model" : "sale.order",
+            "view_mode" : "form",
+            "res_id" : new_cotizacion.id,
+
+        }
