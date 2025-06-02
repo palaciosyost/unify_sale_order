@@ -53,24 +53,22 @@ class SaleUnify(models.TransientModel):
                 "order_id" : new_cotizacion.id
             })
 
-
+        # Mensaje en cotizaciones fusionadas
         for sale in sale_ids:
             sale.message_post(body=f"Esta cotizacion esta fusionada en la cotizacion {new_cotizacion.name}", message_type="comment", subtype_xmlid="mail.mt_note")
-
+        # Mensaje en la nueva cotización
+        new_cotizacion.message_post(body=f"Esta cotización fue creada a partir de la fusión de: {', '.join(sale.name for sale in sale_ids)}", message_type="comment", subtype_xmlid="mail.mt_note")
 
         return {
             "type": "ir.actions.act_window",
             "name": _("Cotización"),
             "res_model": "sale.order",
             "view_mode": "form",
-            "res_id": new_cotizacion.id,  # Asegúrate de que `new_cotizacion` es un objeto `sale.order`
+            "res_id": new_cotizacion.id,
             "target": "current",
             "flags": {"mode": "edit"},
             "views": [(self.env.ref("sale.view_order_form").id, "form")],
         }
-
-
-
 
     def new_readonly_order(self, sale_ids, select_mode_cliente, new_cliente_sale):
         if select_mode_cliente == 'cliente_set' and len(set(sale.partner_id.id for sale in sale_ids)) > 1:
@@ -91,21 +89,31 @@ class SaleUnify(models.TransientModel):
             "state" : "fusionado",
         })
 
+        # Mensaje en cotizaciones fusionadas
         for sale in sale_ids:
-            sale.message_post(body=f"Esta cotizacion esta fusionada en la cotizacion {new_cotizacion.name}", message_type="comment", subtype_xmlid="mail.mt_note")
+            sale.message_post(
+                body=f"Esta cotización fue fusionada con la cotización <b>{new_cotizacion.name}</b>.",
+                message_type="comment",
+                subtype_xmlid="mail.mt_note"
+            )
+        # Mensaje en la nueva cotización
+        new_cotizacion.message_post(
+            body=f"Esta cotización fue creada a partir de la fusión de: {', '.join(sale.name for sale in sale_ids)}",
+            message_type="comment",
+            subtype_xmlid="mail.mt_note"
+        )
 
         return {
             "type": "ir.actions.act_window",
             "name": _("Cotización"),
             "res_model": "sale.order",
             "view_mode": "form",
-            "res_id": new_cotizacion.id,  # Asegúrate de que `new_cotizacion` es un objeto `sale.order`
+            "res_id": new_cotizacion.id,
             "target": "current",
             "flags": {"mode": "edit"},
             "views": [(self.env.ref("sale.view_order_form").id, "form")],
         }
 
-    
     def delete_order(self, sale_ids, select_mode_cliente, new_cliente_sale):
         if select_mode_cliente == 'cliente_set' and len(set(sale.partner_id.id for sale in sale_ids)) > 1:
             raise UserError(_("Si se requiere mantener el mismo cliente para la nueva cotizacion, seleccione las cotizaciones con que tengan el mismo cliente"))
@@ -121,6 +129,12 @@ class SaleUnify(models.TransientModel):
                 "order_id" : new_cotizacion.id
             })
 
+        # Mensaje en cotizaciones fusionadas antes de eliminar
+        for sale in sale_ids:
+            sale.message_post(body=f"Esta cotizacion fue fusionada y eliminada en la cotizacion {new_cotizacion.name}", message_type="comment", subtype_xmlid="mail.mt_note")
+        # Mensaje en la nueva cotización
+        new_cotizacion.message_post(body=f"Esta cotización fue creada a partir de la fusión y eliminación de: {', '.join(sale.name for sale in sale_ids)}", message_type="comment", subtype_xmlid="mail.mt_note")
+
         sale_ids.unlink()
 
         return {
@@ -128,7 +142,7 @@ class SaleUnify(models.TransientModel):
             "name": _("Cotización"),
             "res_model": "sale.order",
             "view_mode": "form",
-            "res_id": new_cotizacion.id,  # Asegúrate de que `new_cotizacion` es un objeto `sale.order`
+            "res_id": new_cotizacion.id,
             "target": "current",
             "flags": {"mode": "edit"},
             "views": [(self.env.ref("sale.view_order_form").id, "form")],
