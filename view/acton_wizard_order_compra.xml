@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- View Subscriptions Change Customer wizard -->
+    <record id="po_uniyfy_order" model="ir.ui.view">
+        <field name="name">purchase.unify.form</field>
+        <field name="model">purchase.unify</field>
+        <field name="arch" type="xml">
+            <form string="Unificar Compras">
+                <group>
+                    <group>
+                        <field name="select_mode" widget="radio" />
+                        <field name="select_mode_proveedor" widget="radio" />
+                        <field name="new_partner" invisible="select_mode_proveedor != 'new_partner'"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="unify_purchase" string="Submit" type="object" class="btn-primary" data-hotkey="q"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel" data-hotkey="x"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action Subscriptions Change Customer -->
+    <record id="action_server_po" model="ir.actions.act_window">
+        <field name="name">Unificar Compras</field>
+        <field name="res_model">purchase.unify</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="po_uniyfy_order"/>
+        <field name="context">{'active_so_ids': active_ids}</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>
+ 
